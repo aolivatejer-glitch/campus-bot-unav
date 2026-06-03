@@ -1,6 +1,6 @@
 from hashlib import sha256
 
-from rag_chatbot.chunking.cleaning import clean_text
+from rag_chatbot.chunking.cleaning import clean_text, text_quality_metadata
 from rag_chatbot.schemas import Chunk, DocumentPage, ProcessedDocument
 
 
@@ -10,8 +10,14 @@ def split_text(
     chunk_size: int,
     chunk_overlap: int,
     min_chunk_size: int,
+    clean_dot_leaders: bool = True,
+    remove_toc_lines: bool = True,
 ) -> list[str]:
-    cleaned = clean_text(text)
+    cleaned = clean_text(
+        text,
+        clean_dot_leaders=clean_dot_leaders,
+        remove_toc_lines=remove_toc_lines,
+    )
     if not cleaned:
         return []
 
@@ -49,17 +55,25 @@ def build_chunks_for_page(
     chunk_size: int,
     chunk_overlap: int,
     min_chunk_size: int,
+    exclude_toc_chunks: bool = True,
+    clean_dot_leaders: bool = True,
 ) -> list[Chunk]:
     text_chunks = split_text(
         page.text,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         min_chunk_size=min_chunk_size,
+        clean_dot_leaders=clean_dot_leaders,
+        remove_toc_lines=exclude_toc_chunks,
     )
     source = document.metadata.get("source", document.file_path)
     chunks: list[Chunk] = []
 
     for index, text in enumerate(text_chunks):
+        quality_metadata = text_quality_metadata(text)
+        if exclude_toc_chunks and quality_metadata["is_toc_candidate"]:
+            continue
+
         page_label = _page_label(page.page_number)
         chunk_id = make_chunk_id(
             document_id=document.document_id,
@@ -82,6 +96,7 @@ def build_chunks_for_page(
                     "source": source,
                     "page_number": page.page_number,
                     "page_label": page_label,
+                    **quality_metadata,
                 },
             )
         )

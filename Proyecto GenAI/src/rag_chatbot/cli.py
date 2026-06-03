@@ -211,6 +211,8 @@ def build_chunks_command() -> None:
     typer.echo(f"- chunk_size: {result.chunk_size}")
     typer.echo(f"- chunk_overlap: {result.chunk_overlap}")
     typer.echo(f"- min_chunk_size: {result.min_chunk_size}")
+    typer.echo(f"- exclude_toc_chunks: {result.exclude_toc_chunks}")
+    typer.echo(f"- clean_dot_leaders: {result.clean_dot_leaders}")
 
 
 @app.command("list-chunks")

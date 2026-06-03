@@ -76,6 +76,61 @@ def test_chunk_metadata_is_preserved() -> None:
     assert chunks[0].file_name == "sample.pdf"
     assert chunks[0].page_number == 3
     assert chunks[0].metadata["source"] == "Documentos/sample.pdf"
+    assert chunks[0].metadata["is_toc_candidate"] is False
+    assert chunks[0].metadata["text_quality"] == "normal"
+
+
+def test_chunking_excludes_table_of_contents_chunks_by_default() -> None:
+    document = _document()
+    page = DocumentPage(
+        page_number=1,
+        text=(
+            "ÍNDICE\n"
+            "1. Introducción ........................................................ 2\n"
+            "2. Compliance .......................................................... 3\n"
+            "3. Formación ........................................................... 4\n"
+        ),
+        char_count=180,
+    )
+
+    chunks = build_chunks_for_page(
+        document,
+        page,
+        chunk_size=500,
+        chunk_overlap=50,
+        min_chunk_size=30,
+    )
+
+    assert chunks == []
+
+
+def test_chunking_can_keep_table_of_contents_with_quality_metadata() -> None:
+    document = _document()
+    page = DocumentPage(
+        page_number=1,
+        text=(
+            "ÍNDICE\n"
+            "1. Introducción ........................................................ 2\n"
+            "2. Compliance .......................................................... 3\n"
+            "3. Formación ........................................................... 4\n"
+        ),
+        char_count=180,
+    )
+
+    chunks = build_chunks_for_page(
+        document,
+        page,
+        chunk_size=500,
+        chunk_overlap=50,
+        min_chunk_size=30,
+        exclude_toc_chunks=False,
+        clean_dot_leaders=False,
+    )
+
+    assert chunks
+    assert chunks[0].metadata["is_toc_candidate"] is True
+    assert chunks[0].metadata["dot_leader_count"] >= 1
+    assert chunks[0].metadata["text_quality"] == "low"
 
 
 def test_chunk_id_is_stable() -> None:

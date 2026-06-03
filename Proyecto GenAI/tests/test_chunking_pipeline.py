@@ -1,7 +1,13 @@
 import json
 from datetime import datetime, timezone
 
-from rag_chatbot.chunking.pipeline import build_chunks, find_chunk, read_chunks
+from rag_chatbot.chunking.pipeline import (
+    build_chunks,
+    chunk_manifest_path,
+    find_chunk,
+    read_chunk_manifest,
+    read_chunks,
+)
 from rag_chatbot.config import AppSettings
 from rag_chatbot.schemas import DocumentPage, DocumentStatus, ProcessedDocument
 
@@ -67,6 +73,11 @@ def test_chunking_pipeline_reads_processed_documents_and_writes_jsonl(tmp_path) 
     assert chunks[0].document_id == "doc_abc"
     assert chunks[0].file_name == "sample.pdf"
     assert chunks[0].page_number == 1
+    assert chunks[0].metadata["is_toc_candidate"] is False
+    manifest = read_chunk_manifest(chunk_manifest_path(settings))
+    assert manifest is not None
+    assert manifest.exclude_toc_chunks is True
+    assert manifest.clean_dot_leaders is True
 
 
 def test_chunking_pipeline_skips_failed_documents(tmp_path) -> None:

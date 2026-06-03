@@ -90,6 +90,8 @@ class ChunkingResult(BaseModel):
     chunk_size: int
     chunk_overlap: int
     min_chunk_size: int
+    exclude_toc_chunks: bool = True
+    clean_dot_leaders: bool = True
 
 
 class ChunkingManifest(BaseModel):
@@ -102,6 +104,8 @@ class ChunkingManifest(BaseModel):
     chunk_size: int
     chunk_overlap: int
     min_chunk_size: int
+    exclude_toc_chunks: bool = True
+    clean_dot_leaders: bool = True
     chunks_file: str
 
 

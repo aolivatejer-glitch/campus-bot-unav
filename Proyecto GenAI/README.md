@@ -484,6 +484,46 @@ terminos son una ayuda, no la unica regla. Si aparecen falsos positivos que no
 se corrigen con umbral y guardrails, el siguiente paso razonable seria evaluar
 reranking local.
 
+## Limpieza de indices de PDF
+
+Algunos PDF incluyen indices o tablas de contenido con lineas dominadas por
+secuencias de puntos, tambien llamadas dot leaders:
+
+```text
+3. Evaluacion de riesgos penales ........................................ 4
+4. Formacion ............................................................ 4
+```
+
+Si esas lineas entran al chunking, consumen espacio, generan embeddings ruidosos
+y pueden aparecer en snippets o respuestas aunque no aporten contenido
+explicativo. El chunking aplica una limpieza conservadora antes de generar
+`chunks.jsonl`:
+
+- Normaliza secuencias largas de puntos sin tocar puntos normales, decimales ni
+  abreviaturas.
+- Elimina lineas que parecen entradas de indice o tabla de contenido.
+- Marca metadata de calidad por chunk: `is_toc_candidate`, `dot_leader_count` y
+  `text_quality`.
+- Por defecto excluye chunks candidatos a indice para que no compitan en Chroma.
+
+Configuracion:
+
+```env
+EXCLUDE_TOC_CHUNKS=true
+CLEAN_DOT_LEADERS=true
+```
+
+Si ya habia chunks e indice creados antes de esta limpieza, reconstruye ambos:
+
+```powershell
+rag-chatbot build-chunks
+rag-chatbot build-index --reset
+```
+
+La indexacion tambien salta defensivamente chunks que lleguen con
+`is_toc_candidate=true`, por compatibilidad con archivos JSONL antiguos o
+generados manualmente.
+
 ## Errores frecuentes
 
 Indice vacio:

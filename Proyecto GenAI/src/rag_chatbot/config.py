@@ -42,6 +42,8 @@ class AppSettings(BaseSettings):
     chunk_size: int = Field(default=1200, gt=0)
     chunk_overlap: int = Field(default=200, ge=0)
     min_chunk_size: int = Field(default=200, gt=0)
+    exclude_toc_chunks: bool = True
+    clean_dot_leaders: bool = True
     top_k: int = Field(default=3, gt=0)
     min_retrieval_score: float = Field(default=0.84, ge=0.0, le=1.0)
     snippet_max_chars: int = Field(default=400, gt=0)

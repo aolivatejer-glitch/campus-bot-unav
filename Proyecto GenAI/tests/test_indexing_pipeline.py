@@ -87,6 +87,13 @@ def _chunk(chunk_id: str, text: str = "Texto del chunk") -> Chunk:
     )
 
 
+def _toc_chunk(chunk_id: str) -> Chunk:
+    chunk = _chunk(chunk_id, "ÍNDICE 1. Introducción ................ 2")
+    chunk.metadata["is_toc_candidate"] = True
+    chunk.metadata["text_quality"] = "low"
+    return chunk
+
+
 def _write_chunks(settings: AppSettings, chunks: list[Chunk]) -> None:
     settings.chunks_file.parent.mkdir(parents=True, exist_ok=True)
     with settings.chunks_file.open("w", encoding="utf-8") as file:
@@ -138,6 +145,23 @@ def test_build_index_skips_existing_ids(tmp_path) -> None:
     assert result.chunks_indexed == 1
     assert result.chunks_skipped == 1
     assert [chunk.chunk_id for chunk in store.added_chunks] == ["c2"]
+
+
+def test_build_index_skips_toc_candidate_chunks(tmp_path) -> None:
+    settings = _settings(tmp_path)
+    _write_chunks(settings, [_toc_chunk("toc"), _chunk("c1")])
+    store = FakeVectorStore()
+
+    result = build_index(
+        settings,
+        embedding_provider=FakeEmbeddingProvider(),
+        vector_store=store,
+    )
+
+    assert result.chunks_read == 2
+    assert result.chunks_indexed == 1
+    assert result.chunks_skipped == 1
+    assert [chunk.chunk_id for chunk in store.added_chunks] == ["c1"]
 
 
 def test_build_index_reset_reindexes_existing_ids(tmp_path) -> None:

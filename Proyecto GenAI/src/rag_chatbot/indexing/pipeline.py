@@ -34,6 +34,13 @@ def build_index(
     chunks = read_chunks(settings.chunks_file, limit=limit)
     if not chunks:
         raise ValueError(f"No chunks found in {settings.chunks_file}")
+    chunks_read = len(chunks)
+    chunks = [chunk for chunk in chunks if not chunk.metadata.get("is_toc_candidate")]
+    chunks_skipped_for_quality = chunks_read - len(chunks)
+    if not chunks:
+        raise ValueError(
+            f"No indexable chunks found in {settings.chunks_file}; all chunks were low quality."
+        )
 
     provider = embedding_provider or SentenceTransformersEmbeddingProvider(
         model_name=settings.embedding_model,
@@ -50,10 +57,14 @@ def build_index(
         logger.info("Vector collection reset: %s", store.collection_name)
 
     chunks_indexed = 0
-    chunks_skipped = 0
+    chunks_skipped = chunks_skipped_for_quality
     seen_ids: set[str] = set()
 
-    logger.info("Starting index build for %s chunks", len(chunks))
+    logger.info(
+        "Starting index build for %s chunks skipped_low_quality=%s",
+        len(chunks),
+        chunks_skipped_for_quality,
+    )
 
     for batch in batch_items(chunks, settings.embedding_batch_size):
         unique_batch = [chunk for chunk in batch if chunk.chunk_id not in seen_ids]
@@ -77,14 +88,14 @@ def build_index(
 
     logger.info(
         "Index build finished chunks_read=%s indexed=%s skipped=%s collection=%s",
-        len(chunks),
+        chunks_read,
         chunks_indexed,
         chunks_skipped,
         store.collection_name,
     )
 
     return IndexingResult(
-        chunks_read=len(chunks),
+        chunks_read=chunks_read,
         chunks_indexed=chunks_indexed,
         chunks_skipped=chunks_skipped,
         collection_name=store.collection_name,

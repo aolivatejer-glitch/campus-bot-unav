@@ -22,6 +22,15 @@ def test_make_snippet_normalizes_whitespace_and_limits_length() -> None:
     assert snippet.endswith("...")
 
 
+def test_make_snippet_removes_residual_dot_leaders_before_cutting() -> None:
+    text = "3. Evaluación de riesgos penales ........................................ 4"
+
+    snippet = make_snippet(text, max_chars=80)
+
+    assert "....." not in snippet
+    assert "Evaluación de riesgos penales" in snippet
+
+
 def test_make_source_label_includes_page_when_available() -> None:
     assert make_source_label("archivo.pdf", 4) == "archivo.pdf, pagina 4"
     assert make_source_label("archivo.txt", None) == "archivo.txt"

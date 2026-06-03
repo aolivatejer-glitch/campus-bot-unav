@@ -1,5 +1,7 @@
 import re
 
+from rag_chatbot.chunking.cleaning import normalize_dot_leaders
+
 
 def cosine_distance_to_score(distance: float | None) -> float:
     if distance is None:
@@ -9,7 +11,8 @@ def cosine_distance_to_score(distance: float | None) -> float:
 
 
 def make_snippet(text: str, max_chars: int = 400) -> str:
-    normalized = re.sub(r"\s+", " ", text).strip()
+    normalized = normalize_dot_leaders(text)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
     if len(normalized) <= max_chars:
         return normalized
 

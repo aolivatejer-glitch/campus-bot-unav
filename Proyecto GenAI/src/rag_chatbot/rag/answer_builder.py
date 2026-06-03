@@ -8,6 +8,20 @@ def build_extractive_answer(
     context: ContextSufficiencyResult,
     max_context_chars: int,
 ) -> str:
+    useful_results = [
+        result
+        for result in results
+        if not result.metadata.get("is_toc_candidate")
+    ]
+    useful_sources = [
+        source
+        for source in sources
+        if any(result.chunk_id == source.chunk_id for result in useful_results)
+    ]
+    if useful_results:
+        results = useful_results
+        sources = useful_sources
+
     if not context.has_sufficient_context:
         answer = context.warning or (
             "No encontré información suficiente en los documentos indexados para "

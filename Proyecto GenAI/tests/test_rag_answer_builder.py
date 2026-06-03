@@ -25,13 +25,17 @@ def _out_of_domain_context() -> ContextSufficiencyResult:
     )
 
 
-def _result() -> RetrievalResult:
+def _result(chunk_id: str = "chunk_1", *, is_toc_candidate: bool = False) -> RetrievalResult:
     return RetrievalResult(
-        chunk_id="chunk_1",
+        chunk_id=chunk_id,
         score=0.8,
         distance=0.2,
         text="Texto completo",
-        snippet="Fragmento recuperado",
+        snippet=(
+            "ÍNDICE 1. Introducción ................ 2"
+            if is_toc_candidate
+            else "Fragmento recuperado"
+        ),
         document_id="doc_1",
         file_name="archivo.pdf",
         file_path="Documentos/archivo.pdf",
@@ -40,6 +44,7 @@ def _result() -> RetrievalResult:
         chunk_index=0,
         char_count=14,
         source_label="archivo.pdf, pagina 2",
+        metadata={"is_toc_candidate": is_toc_candidate},
     )
 
 
@@ -87,3 +92,31 @@ def test_build_extractive_answer_out_of_domain_does_not_add_retrieved_fragments(
 
     assert answer == "Pregunta fuera del alcance del corpus."
     assert "Se recuperaron algunos fragmentos" not in answer
+
+
+def test_build_extractive_answer_skips_toc_candidate_when_useful_chunk_exists() -> None:
+    answer = build_extractive_answer(
+        results=[_result("toc", is_toc_candidate=True), _result("chunk_1")],
+        sources=[
+            RagSource(
+                file_name="archivo.pdf",
+                page_number=2,
+                chunk_id="toc",
+                source_label="archivo.pdf, pagina 2",
+                snippet="ÍNDICE 1. Introducción ................ 2",
+            ),
+            RagSource(
+                file_name="archivo.pdf",
+                page_number=3,
+                chunk_id="chunk_1",
+                source_label="archivo.pdf, pagina 3",
+                snippet="Fragmento recuperado",
+            ),
+        ],
+        context=_context(True),
+        max_context_chars=500,
+    )
+
+    assert "Fragmento recuperado" in answer
+    assert "................" not in answer
+    assert "toc" not in answer

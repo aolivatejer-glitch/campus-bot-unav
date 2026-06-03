@@ -22,6 +22,8 @@ ENV_KEYS = [
     "CHUNK_SIZE",
     "CHUNK_OVERLAP",
     "MIN_CHUNK_SIZE",
+    "EXCLUDE_TOC_CHUNKS",
+    "CLEAN_DOT_LEADERS",
     "TOP_K",
     "MIN_RETRIEVAL_SCORE",
     "SNIPPET_MAX_CHARS",
@@ -59,6 +61,8 @@ def test_default_settings_load(monkeypatch) -> None:
     assert settings.chunk_size == 1200
     assert settings.chunk_overlap == 200
     assert settings.min_chunk_size == 200
+    assert settings.exclude_toc_chunks is True
+    assert settings.clean_dot_leaders is True
     assert settings.top_k == 3
     assert settings.min_retrieval_score == 0.84
     assert settings.snippet_max_chars == 400

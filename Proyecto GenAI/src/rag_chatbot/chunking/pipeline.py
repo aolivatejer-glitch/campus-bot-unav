@@ -58,6 +58,8 @@ def build_chunks(
                 chunk_size=settings.chunk_size,
                 chunk_overlap=settings.chunk_overlap,
                 min_chunk_size=settings.min_chunk_size,
+                exclude_toc_chunks=settings.exclude_toc_chunks,
+                clean_dot_leaders=settings.clean_dot_leaders,
             )
             document_chunks.extend(page_chunks)
 
@@ -106,6 +108,8 @@ def build_chunks(
         chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
         min_chunk_size=settings.min_chunk_size,
+        exclude_toc_chunks=settings.exclude_toc_chunks,
+        clean_dot_leaders=settings.clean_dot_leaders,
     )
 
 
@@ -189,6 +193,8 @@ def _write_chunk_manifest(
         chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
         min_chunk_size=settings.min_chunk_size,
+        exclude_toc_chunks=settings.exclude_toc_chunks,
+        clean_dot_leaders=settings.clean_dot_leaders,
         chunks_file=str(chunks_file),
     )
     manifest_path.write_text(
