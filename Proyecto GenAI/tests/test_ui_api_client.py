@@ -1,0 +1,99 @@
+import json
+from urllib.error import URLError
+
+import pytest
+
+from rag_chatbot.ui import api_client as api_client_module
+from rag_chatbot.ui.api_client import ApiConnectionError, RagApiClient
+
+
+class FakeResponse:
+    def __init__(self, payload: dict):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def read(self):
+        return json.dumps(self.payload).encode("utf-8")
+
+
+def test_api_client_builds_query_request(monkeypatch) -> None:
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["method"] = request.method
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        captured["timeout"] = timeout
+        return FakeResponse(
+            {
+                "question": "pregunta",
+                "answer": "respuesta",
+                "has_sufficient_context": True,
+                "sources": [],
+                "retrieved_chunks": [],
+            }
+        )
+
+    monkeypatch.setattr(api_client_module, "urlopen", fake_urlopen)
+    client = RagApiClient("http://127.0.0.1:8000/", timeout=3)
+
+    response = client.query(
+        question="pregunta",
+        top_k=5,
+        min_score=0.3,
+        show_chunks=False,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8000/query"
+    assert captured["method"] == "POST"
+    assert captured["body"] == {
+        "question": "pregunta",
+        "top_k": 5,
+        "min_score": 0.3,
+        "show_chunks": False,
+    }
+    assert captured["timeout"] == 3
+    assert response["answer"] == "respuesta"
+
+
+def test_api_client_handles_connection_errors(monkeypatch) -> None:
+    def fake_urlopen(request, timeout):
+        raise URLError("connection refused")
+
+    monkeypatch.setattr(api_client_module, "urlopen", fake_urlopen)
+    client = RagApiClient("http://127.0.0.1:8000")
+
+    with pytest.raises(ApiConnectionError, match="No se pudo conectar"):
+        client.health()
+
+
+def test_api_client_handles_insufficient_context_response(monkeypatch) -> None:
+    def fake_urlopen(request, timeout):
+        return FakeResponse(
+            {
+                "question": "fuera de dominio",
+                "answer": "No encontre informacion suficiente.",
+                "has_sufficient_context": False,
+                "warning": "No encontre informacion suficiente.",
+                "sources": [],
+                "retrieved_chunks": [],
+            }
+        )
+
+    monkeypatch.setattr(api_client_module, "urlopen", fake_urlopen)
+    client = RagApiClient("http://127.0.0.1:8000")
+
+    response = client.query(
+        question="fuera de dominio",
+        top_k=5,
+        min_score=0.3,
+        show_chunks=False,
+    )
+
+    assert response["has_sufficient_context"] is False
+    assert response["warning"] == "No encontre informacion suficiente."

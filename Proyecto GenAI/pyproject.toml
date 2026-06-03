@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-chatbot"
+version = "0.1.0"
+description = "Chatbot documental RAG local-first"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "PyMuPDF>=1.24",
+    "chromadb>=0.5",
+    "fastapi>=0.110",
+    "pydantic-settings>=2.0",
+    "python-docx>=1.1",
+    "streamlit>=1.36",
+    "typer>=0.12",
+    "uvicorn>=0.27",
+]
+
+[project.scripts]
+rag-chatbot = "rag_chatbot.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

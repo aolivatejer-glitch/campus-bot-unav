@@ -1,0 +1,1 @@
+"""Vector index construction package."""
