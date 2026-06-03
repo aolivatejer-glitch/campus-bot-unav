@@ -543,6 +543,11 @@ def search_debug(
 @app.command()
 def ask(
     question: str,
+    mode: str | None = typer.Option(
+        None,
+        "--mode",
+        help="Modo de respuesta: extractive o llm.",
+    ),
     top_k: int | None = typer.Option(
         None,
         "--top-k",
@@ -588,6 +593,7 @@ def ask(
             min_score=min_score,
             document_id=document_id,
             file_name=file_name,
+            mode=mode,
         )
     except Exception as exc:
         logger.error("Local RAG ask failed: %s", exc)
@@ -606,6 +612,14 @@ def ask(
     typer.echo("")
     typer.echo(f"Context sufficient: {response.has_sufficient_context}")
     typer.echo(f"Context reason: {response.context.reason}")
+    typer.echo(f"Answer mode: {response.mode}")
+    typer.echo(f"LLM used: {response.llm_used}")
+    if response.llm_provider:
+        typer.echo(f"LLM provider: {response.llm_provider}")
+    if response.llm_model:
+        typer.echo(f"LLM model: {response.llm_model}")
+    if response.llm_warning:
+        typer.echo(f"LLM warning: {response.llm_warning}")
     if response.rejection_reason:
         typer.echo(f"Rejection reason: {response.rejection_reason}")
     typer.echo(f"Retrieved chunk count: {len(response.retrieved_chunks)}")

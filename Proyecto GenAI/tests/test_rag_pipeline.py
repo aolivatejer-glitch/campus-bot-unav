@@ -42,6 +42,25 @@ class FakeRetriever:
         )
 
 
+class FakeLLMProvider:
+    provider_name = "gemini"
+    model_name = "fake-gemini"
+
+    def __init__(self, answer: str = "Respuesta generativa con fuentes.") -> None:
+        self.answer = answer
+        self.prompts = []
+
+    def generate(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        return self.answer
+
+
+class FailingLLMProvider(FakeLLMProvider):
+    def generate(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        raise RuntimeError("boom")
+
+
 def _settings(tmp_path) -> AppSettings:
     return AppSettings(
         documents_dir=tmp_path / "Documentos",
@@ -56,6 +75,8 @@ def _settings(tmp_path) -> AppSettings:
         log_dir=tmp_path / "logs",
         min_context_chars=100,
         max_sources=2,
+        llm_provider="gemini",
+        gemini_api_key="test-key",
         _env_file=None,
     )
 
@@ -169,3 +190,110 @@ def test_local_rag_pipeline_allows_ambiguous_question_when_retrieval_is_strong(
     assert answer.has_sufficient_context is True
     assert answer.domain is not None
     assert answer.domain.is_in_domain is None
+
+
+def test_local_rag_pipeline_does_not_call_llm_when_external_llm_disabled(tmp_path) -> None:
+    settings = _settings(tmp_path)
+    settings.allow_external_llm = False
+    llm = FakeLLMProvider()
+    pipeline = LocalRagPipeline(
+        settings,
+        retriever=FakeRetriever([_result("chunk_1", score=0.95)]),
+        llm_provider=llm,
+    )
+
+    answer = pipeline.ask("pregunta", min_score=0.3, mode="llm")
+
+    assert llm.prompts == []
+    assert answer.llm_used is False
+    assert answer.mode == "extractive"
+    assert "ALLOW_EXTERNAL_LLM=false" in answer.llm_warning
+
+
+def test_local_rag_pipeline_uses_llm_when_allowed_and_context_sufficient(tmp_path) -> None:
+    settings = _settings(tmp_path)
+    settings.allow_external_llm = True
+    llm = FakeLLMProvider("Respuesta Gemini citando archivo.pdf, pagina 1.")
+    pipeline = LocalRagPipeline(
+        settings,
+        retriever=FakeRetriever([_result("chunk_1", score=0.95)]),
+        llm_provider=llm,
+    )
+
+    answer = pipeline.ask("¿Qué dice compliance?", min_score=0.3, mode="llm")
+
+    assert answer.answer == "Respuesta Gemini citando archivo.pdf, pagina 1."
+    assert answer.llm_used is True
+    assert answer.mode == "llm"
+    assert answer.llm_provider == "gemini"
+    assert answer.llm_model == "fake-gemini"
+    assert "archivo.pdf" in llm.prompts[0]
+    assert "chunk_1" in llm.prompts[0]
+
+
+def test_local_rag_pipeline_does_not_call_llm_when_guardrails_reject(tmp_path) -> None:
+    settings = _settings(tmp_path)
+    settings.allow_external_llm = True
+    llm = FakeLLMProvider()
+    retriever = FakeRetriever([_result("chunk_1", score=0.99)])
+    pipeline = LocalRagPipeline(settings, retriever=retriever, llm_provider=llm)
+
+    answer = pipeline.ask("¿Qué documentos mencionan al Rey?", mode="llm")
+
+    assert retriever.calls == []
+    assert llm.prompts == []
+    assert answer.rejection_reason == "out_of_domain"
+    assert answer.llm_used is False
+
+
+def test_local_rag_pipeline_does_not_call_llm_when_context_insufficient(tmp_path) -> None:
+    settings = _settings(tmp_path)
+    settings.allow_external_llm = True
+    llm = FakeLLMProvider()
+    pipeline = LocalRagPipeline(
+        settings,
+        retriever=FakeRetriever([_result("chunk_1", score=0.2)]),
+        llm_provider=llm,
+    )
+
+    answer = pipeline.ask("pregunta", min_score=0.84, mode="llm")
+
+    assert llm.prompts == []
+    assert answer.has_sufficient_context is False
+    assert answer.llm_used is False
+    assert "contexto no fue suficiente" in answer.llm_warning
+
+
+def test_local_rag_pipeline_falls_back_to_extractive_when_llm_fails(tmp_path) -> None:
+    settings = _settings(tmp_path)
+    settings.allow_external_llm = True
+    llm = FailingLLMProvider()
+    pipeline = LocalRagPipeline(
+        settings,
+        retriever=FakeRetriever([_result("chunk_1", score=0.95)]),
+        llm_provider=llm,
+    )
+
+    answer = pipeline.ask("pregunta", min_score=0.3, mode="llm")
+
+    assert llm.prompts
+    assert answer.llm_used is False
+    assert answer.mode == "extractive"
+    assert "Con base en los documentos recuperados" in answer.answer
+    assert "Gemini falló" in answer.llm_warning
+
+
+def test_local_rag_pipeline_does_not_log_api_key_when_llm_fails(tmp_path, caplog) -> None:
+    settings = _settings(tmp_path)
+    settings.allow_external_llm = True
+    settings.gemini_api_key = "super-secret-key"
+    pipeline = LocalRagPipeline(
+        settings,
+        retriever=FakeRetriever([_result("chunk_1", score=0.95)]),
+        llm_provider=FailingLLMProvider(),
+    )
+
+    with caplog.at_level("WARNING"):
+        pipeline.ask("pregunta", min_score=0.3, mode="llm")
+
+    assert "super-secret-key" not in caplog.text

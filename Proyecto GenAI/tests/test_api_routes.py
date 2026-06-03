@@ -50,6 +50,7 @@ class FakeRetriever:
         min_score=None,
         document_id=None,
         file_name=None,
+        mode=None,
     ):
         return RetrievalResponse(
             query=RetrievalQuery(
@@ -98,6 +99,7 @@ class FakeRagPipeline:
         min_score=None,
         document_id=None,
         file_name=None,
+        mode=None,
     ):
         text = "Texto completo recuperado."
         return RagAnswer(
@@ -105,6 +107,10 @@ class FakeRagPipeline:
             answer="Respuesta extractiva local.",
             has_sufficient_context=True,
             warning=None,
+            mode="llm" if mode == "llm" else "extractive",
+            llm_provider="gemini" if mode == "llm" else None,
+            llm_model="fake-gemini" if mode == "llm" else None,
+            llm_used=mode == "llm",
             sources=[
                 RagSource(
                     file_name="sample.pdf",
@@ -144,6 +150,7 @@ class RejectedDomainRagPipeline:
         min_score=None,
         document_id=None,
         file_name=None,
+        mode=None,
     ):
         return RagAnswer(
             question=question,
@@ -217,6 +224,8 @@ def test_query_with_mock_hides_chunks_by_default(client) -> None:
     payload = response.json()
     assert payload["answer"] == "Respuesta extractiva local."
     assert payload["retrieved_chunks"] == []
+    assert payload["mode"] == "extractive"
+    assert payload["llm_used"] is False
 
 
 def test_query_can_show_chunks(client) -> None:
@@ -226,6 +235,18 @@ def test_query_can_show_chunks(client) -> None:
 
     assert response.status_code == 200
     assert response.json()["retrieved_chunks"][0]["text"] == "Texto completo recuperado."
+
+
+def test_query_accepts_llm_mode(client) -> None:
+    app.dependency_overrides[dependencies.get_rag_pipeline] = lambda: FakeRagPipeline()
+
+    response = client.post("/query", json={"question": "pregunta", "mode": "llm"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["mode"] == "llm"
+    assert payload["llm_used"] is True
+    assert payload["llm_provider"] == "gemini"
 
 
 def test_query_exposes_domain_rejection_reason(client) -> None:

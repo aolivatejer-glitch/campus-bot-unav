@@ -5,8 +5,9 @@ Universidad de Navarra. El sistema ingiere documentos locales, extrae texto,
 genera chunks trazables, crea embeddings locales, indexa en Chroma local y
 responde de forma extractiva con fuentes.
 
-Por defecto no usa OpenAI, Gemini, LangChain ni ningun LLM externo. Los
-documentos, chunks, preguntas y contexto no deben salir del equipo.
+Por defecto no usa OpenAI, Gemini, LangChain ni ningun LLM externo. El modo
+base es extractivo local. Gemini existe solo como modo generativo opcional y
+debe activarse de forma explicita en `.env`.
 
 ## Estado del MVP
 
@@ -24,6 +25,7 @@ Implementado:
 - UI local Streamlit consumiendo la API.
 - Diagnostico local end-to-end con `doctor`.
 - Flujo local completo con `run-local-pipeline`.
+- Modo generativo opcional con Gemini, protegido por configuracion y guardrails.
 
 No implementado todavia:
 
@@ -31,9 +33,53 @@ No implementado todavia:
 - Reranking.
 - Docker.
 - Autenticacion compleja.
-- LLM externo.
 - LLM local generativo.
 - Despliegue productivo.
+
+## Requisitos
+
+Requisitos del entorno:
+
+- Windows con PowerShell o CMD.
+- Python `>=3.12`. El proyecto se ha usado con Python `3.12.6`.
+- `pip` actualizado.
+- Documentos fuente en `Documentos/`.
+- Internet solo para dos casos puntuales:
+  - descargar dependencias o modelos la primera vez;
+  - usar Gemini si activas explicitamente el modo LLM.
+
+Dependencias principales declaradas en `pyproject.toml`:
+
+- `PyMuPDF`: lectura de PDF con texto seleccionable.
+- `python-docx`: lectura de DOCX.
+- `sentence-transformers`: embeddings locales. Si no estuviera instalado en tu
+  entorno, instalalo antes de construir el indice.
+- `chromadb`: base vectorial local persistente.
+- `fastapi` y `uvicorn`: API local.
+- `streamlit`: interfaz local.
+- `typer`: CLI.
+- `pydantic-settings`: configuracion desde `.env`.
+- `google-genai`: cliente Gemini opcional.
+- `pytest`: pruebas, disponible como extra de desarrollo.
+
+Instalacion recomendada:
+
+```powershell
+python -m pip install -e .
+```
+
+Para instalar tambien herramientas de desarrollo y pruebas:
+
+```powershell
+python -m pip install -e ".[dev]"
+```
+
+El proyecto usa `pyproject.toml` como fuente principal de dependencias. No hace
+falta un `requirements.txt` separado para la instalacion editable.
+
+Si vas a usar Gemini, configura `.env` y recuerda que solo se llamara al
+proveedor externo cuando `ALLOW_EXTERNAL_LLM=true`, `LLM_PROVIDER=gemini` y la
+consulta se ejecute con `--mode llm`.
 
 ## Estructura
 
@@ -70,6 +116,8 @@ los comandos del proyecto.
 
 Desde la raiz del proyecto:
 
+PowerShell:
+
 ```powershell
 python -m pip install -e .
 ```
@@ -78,6 +126,13 @@ Si quieres personalizar rutas o parametros:
 
 ```powershell
 Copy-Item .env.example .env
+```
+
+CMD:
+
+```cmd
+python -m pip install -e .
+copy .env.example .env
 ```
 
 Variables principales:
@@ -96,6 +151,8 @@ Variables principales:
 - `ALLOW_EXTERNAL_LLM=false` y `LLM_PROVIDER=none`: privacidad local-first.
 
 ## Flujo recomendado desde cero
+
+PowerShell o CMD:
 
 ```powershell
 python -m pip install -e .
@@ -129,6 +186,58 @@ La evaluacion no se ejecuta automaticamente. Si quieres incluirla:
 
 ```powershell
 rag-chatbot run-local-pipeline --reset-index --run-eval
+```
+
+## Uso desde Windows CMD
+
+La mayoria de comandos del proyecto son iguales en PowerShell y CMD:
+
+```cmd
+python -m pip install -e .
+rag-chatbot doctor
+rag-chatbot ingest
+rag-chatbot build-chunks
+rag-chatbot build-index --reset
+rag-chatbot ask "Que documentos hablan sobre compliance?"
+rag-chatbot serve
+```
+
+En otra ventana de CMD:
+
+```cmd
+rag-chatbot ui
+```
+
+Copiar el archivo de configuracion:
+
+```cmd
+copy .env.example .env
+```
+
+Definir variables temporales solo para la sesion actual de CMD:
+
+```cmd
+set API_BASE_URL=http://127.0.0.1:8000
+set ALLOW_EXTERNAL_LLM=false
+set LLM_PROVIDER=none
+```
+
+Si vas a probar Gemini desde CMD, configura `.env` o define temporalmente:
+
+```cmd
+set ALLOW_EXTERNAL_LLM=true
+set LLM_PROVIDER=gemini
+set GEMINI_API_KEY=tu_clave
+rag-chatbot ask "Que documentos hablan sobre compliance?" --mode llm
+```
+
+Para continuar comandos largos en varias lineas en CMD se usa `^`, no el
+backtick de PowerShell:
+
+```cmd
+curl -X POST "http://127.0.0.1:8000/query" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"question\":\"Que documentos hablan sobre compliance?\",\"mode\":\"extractive\",\"top_k\":3}"
 ```
 
 ## Diagnostico
@@ -232,6 +341,18 @@ Prueba rapida:
 curl http://127.0.0.1:8000/health
 ```
 
+En PowerShell, si `curl` se comporta como alias, usa:
+
+```powershell
+curl.exe http://127.0.0.1:8000/health
+```
+
+En CMD:
+
+```cmd
+curl http://127.0.0.1:8000/health
+```
+
 Consulta RAG extractiva:
 
 ```powershell
@@ -242,12 +363,30 @@ Invoke-RestMethod `
   -Body '{"question":"Que documentos hablan sobre compliance?","top_k":5}'
 ```
 
+Consulta equivalente en CMD:
+
+```cmd
+curl -X POST "http://127.0.0.1:8000/query" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"question\":\"Que documentos hablan sobre compliance?\",\"mode\":\"extractive\",\"top_k\":5}"
+```
+
+Consulta Gemini opcional desde CMD, si `.env` permite LLM externo:
+
+```cmd
+curl -X POST "http://127.0.0.1:8000/query" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"question\":\"Que documentos hablan sobre compliance?\",\"mode\":\"llm\",\"top_k\":3,\"min_score\":0.84}"
+```
+
 `/retrieve` devuelve resultados semanticos crudos. `/query` devuelve una
 respuesta extractiva con fuentes. Por defecto no se devuelven chunks completos.
 
 ## UI local
 
 Flujo recomendado:
+
+PowerShell o CMD:
 
 ```powershell
 rag-chatbot serve
@@ -257,6 +396,12 @@ En otra terminal:
 
 ```powershell
 rag-chatbot ui
+```
+
+Tambien puedes fijar la URL de API:
+
+```cmd
+rag-chatbot ui --api-base-url http://127.0.0.1:8000
 ```
 
 La interfaz permite escribir una pregunta, ajustar `top_k` y `min_score`,
@@ -524,6 +669,65 @@ La indexacion tambien salta defensivamente chunks que lleguen con
 `is_toc_candidate=true`, por compatibilidad con archivos JSONL antiguos o
 generados manualmente.
 
+## RAG generativo opcional con Gemini
+
+El modo por defecto sigue siendo extractivo local. En ese modo no se llama a
+ningun proveedor externo:
+
+```powershell
+rag-chatbot ask "Que documentos hablan sobre compliance?" --mode extractive
+```
+
+Gemini solo se usa si se solicita explicitamente y la configuracion lo permite:
+
+```powershell
+rag-chatbot ask "Que documentos hablan sobre compliance?" --mode llm
+```
+
+Configuracion en `.env`:
+
+```env
+ALLOW_EXTERNAL_LLM=true
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=tu_clave
+GEMINI_MODEL=gemini-2.5-flash
+LLM_TEMPERATURE=0.2
+LLM_MAX_CONTEXT_CHARS=6000
+LLM_MODE_DEFAULT=extractive
+```
+
+Reglas de seguridad del modo generativo:
+
+- Si `ALLOW_EXTERNAL_LLM=false`, Gemini no se llama.
+- Si la pregunta fue rechazada por guardrails de dominio, Gemini no se llama.
+- Si el contexto recuperado es insuficiente, Gemini no se llama.
+- No se envia el corpus completo, solo los chunks recuperados y aceptados.
+- La API key se lee desde `.env` y se oculta en `show-config`.
+- Si Gemini falla, el sistema vuelve a la respuesta extractiva local.
+
+El prompt obliga al modelo a responder solo con el contexto recuperado, citar
+fuentes y decir que no hay informacion suficiente si falta evidencia. Aun asi,
+al usar Gemini, la pregunta y los chunks aceptados salen del entorno local hacia
+el proveedor externo. Revisa limites, cuotas y condiciones del free tier de
+Gemini antes de usarlo en demos o clases.
+
+API:
+
+```json
+{
+  "question": "Que documentos hablan sobre compliance?",
+  "mode": "llm",
+  "top_k": 3,
+  "min_score": 0.84
+}
+```
+
+UI:
+
+1. Levanta la API con `rag-chatbot serve`.
+2. Abre la UI con `rag-chatbot ui`.
+3. Elige `Extractivo local` o `Gemini generativo` en el panel lateral.
+
 ## Errores frecuentes
 
 Indice vacio:
@@ -586,15 +790,25 @@ rag-chatbot ui
 - No exponer la API ni la UI publicamente.
 - No hay autenticacion compleja.
 - No hay cola de tareas; ingesta e indexacion pueden tardar.
-- La respuesta es extractiva, no generativa.
+- Por defecto la respuesta es extractiva local.
+- El modo Gemini es opcional y envia solo pregunta y chunks recuperados aceptados
+  al proveedor externo.
 - Puede repetir fragmentos.
 - Depende de la calidad de extraccion, chunking e indice.
 - No sustituye revision juridica, normativa o experta.
 
 ## Tests
 
+PowerShell o CMD:
+
 ```powershell
 python -m pytest
+```
+
+Sin cache de pytest:
+
+```cmd
+python -m pytest -p no:cacheprovider
 ```
 
 Las pruebas unitarias no requieren descargar modelos reales ni tener un indice

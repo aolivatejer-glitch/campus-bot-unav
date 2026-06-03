@@ -124,6 +124,7 @@ def query(
             min_score=request.min_score,
             document_id=request.document_id,
             file_name=request.file_name,
+            mode=request.mode,
         )
     except Exception as exc:
         raise _to_http_exception(exc) from exc
@@ -134,6 +135,11 @@ def query(
         has_sufficient_context=response.has_sufficient_context,
         warning=response.warning,
         rejection_reason=response.rejection_reason,
+        mode=response.mode,
+        llm_provider=response.llm_provider,
+        llm_model=response.llm_model,
+        llm_used=response.llm_used,
+        llm_warning=response.llm_warning,
         sources=[
             QuerySourceItem(
                 file_name=source.file_name,

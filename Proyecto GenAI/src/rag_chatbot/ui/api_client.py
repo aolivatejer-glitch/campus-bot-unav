@@ -27,12 +27,14 @@ class RagApiClient:
         self,
         *,
         question: str,
+        mode: str,
         top_k: int,
         min_score: float,
         show_chunks: bool,
     ) -> dict[str, Any]:
         payload = {
             "question": question,
+            "mode": mode,
             "top_k": top_k,
             "min_score": min_score,
             "show_chunks": show_chunks,

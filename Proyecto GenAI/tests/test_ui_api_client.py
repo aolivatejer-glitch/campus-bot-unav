@@ -44,6 +44,7 @@ def test_api_client_builds_query_request(monkeypatch) -> None:
 
     response = client.query(
         question="pregunta",
+        mode="llm",
         top_k=5,
         min_score=0.3,
         show_chunks=False,
@@ -53,6 +54,7 @@ def test_api_client_builds_query_request(monkeypatch) -> None:
     assert captured["method"] == "POST"
     assert captured["body"] == {
         "question": "pregunta",
+        "mode": "llm",
         "top_k": 5,
         "min_score": 0.3,
         "show_chunks": False,
@@ -91,6 +93,7 @@ def test_api_client_handles_insufficient_context_response(monkeypatch) -> None:
 
     response = client.query(
         question="fuera de dominio",
+        mode="extractive",
         top_k=5,
         min_score=0.3,
         show_chunks=False,

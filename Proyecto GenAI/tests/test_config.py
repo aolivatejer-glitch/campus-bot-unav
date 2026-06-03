@@ -37,6 +37,11 @@ ENV_KEYS = [
     "EVAL_ANSWER_PREVIEW_CHARS",
     "ALLOW_EXTERNAL_LLM",
     "LLM_PROVIDER",
+    "GEMINI_API_KEY",
+    "GEMINI_MODEL",
+    "LLM_TEMPERATURE",
+    "LLM_MAX_CONTEXT_CHARS",
+    "LLM_MODE_DEFAULT",
     "API_HOST",
     "API_PORT",
     "API_RELOAD",
@@ -58,6 +63,11 @@ def test_default_settings_load(monkeypatch) -> None:
     assert settings.chroma_collection_name == "documents"
     assert settings.allow_external_llm is False
     assert settings.llm_provider == "none"
+    assert settings.gemini_api_key == ""
+    assert settings.gemini_model == "gemini-2.5-flash"
+    assert settings.llm_temperature == 0.2
+    assert settings.llm_max_context_chars == 6000
+    assert settings.llm_mode_default == "extractive"
     assert settings.chunk_size == 1200
     assert settings.chunk_overlap == 200
     assert settings.min_chunk_size == 200
@@ -75,6 +85,12 @@ def test_default_settings_load(monkeypatch) -> None:
     assert settings.api_reload is False
     assert settings.api_include_debug_errors is False
     assert settings.api_base_url == "http://127.0.0.1:8000"
+
+
+def test_public_dict_masks_gemini_api_key() -> None:
+    settings = AppSettings(gemini_api_key="secret-key", _env_file=None)
+
+    assert settings.public_dict()["gemini_api_key"] == "***"
 
 
 def test_path_settings_are_path_instances() -> None:

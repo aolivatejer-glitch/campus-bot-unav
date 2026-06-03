@@ -58,6 +58,11 @@ class AppSettings(BaseSettings):
 
     allow_external_llm: bool = False
     llm_provider: str = "none"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    llm_temperature: float = Field(default=0.2, ge=0.0, le=2.0)
+    llm_max_context_chars: int = Field(default=6000, gt=0)
+    llm_mode_default: str = "extractive"
 
     api_host: str = "127.0.0.1"
     api_port: int = Field(default=8000, gt=0, le=65535)

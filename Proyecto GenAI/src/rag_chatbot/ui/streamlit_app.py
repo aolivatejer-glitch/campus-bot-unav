@@ -19,7 +19,7 @@ def main() -> None:
     )
 
     st.title("Chatbot documental local")
-    st.caption("Consulta local-first sobre documentos indexados. Sin LLM externo.")
+    st.caption("Consulta local-first sobre documentos indexados. Gemini es opcional.")
 
     with st.sidebar:
         st.header("Conexión")
@@ -27,6 +27,12 @@ def main() -> None:
         client = RagApiClient(api_base_url)
 
         st.header("Consulta")
+        mode_label = st.radio(
+            "Modo",
+            ["Extractivo local", "Gemini generativo"],
+            index=0 if settings.llm_mode_default != "llm" else 1,
+        )
+        mode = "llm" if mode_label == "Gemini generativo" else "extractive"
         top_k = st.number_input(
             "top_k",
             min_value=1,
@@ -64,10 +70,9 @@ def main() -> None:
         "¿Qué equipo ganó la última Champions League?",
     ]
     selected_example = st.selectbox("Ejemplos", [""] + examples)
-    default_question = selected_example or ""
     question = st.text_area(
         "Pregunta",
-        value=default_question,
+        value=selected_example or "",
         height=120,
         placeholder="Escribe una pregunta sobre los documentos indexados...",
     )
@@ -80,6 +85,7 @@ def main() -> None:
         try:
             response = client.query(
                 question=question.strip(),
+                mode=mode,
                 top_k=int(top_k),
                 min_score=float(min_score),
                 show_chunks=show_chunks,
@@ -129,9 +135,20 @@ def _render_answer(st, response: dict, *, show_sources: bool, show_chunks: bool)
     elif response.get("warning"):
         st.warning(response["warning"])
 
+    if response.get("llm_warning"):
+        st.info(response["llm_warning"])
+
     st.subheader("Respuesta")
     st.write(response.get("answer", ""))
-    st.caption(f"Contexto suficiente: {response.get('has_sufficient_context')}")
+    st.caption(
+        " · ".join(
+            [
+                f"Contexto suficiente: {response.get('has_sufficient_context')}",
+                f"Modo usado: {response.get('mode', 'extractive')}",
+                f"LLM usado: {response.get('llm_used', False)}",
+            ]
+        )
+    )
 
     if not response.get("has_sufficient_context"):
         return

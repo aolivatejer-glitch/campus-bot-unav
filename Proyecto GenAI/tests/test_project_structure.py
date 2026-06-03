@@ -46,6 +46,10 @@ def test_expected_project_structure_exists() -> None:
         "src/rag_chatbot/vectorstores/chroma_store.py",
         "src/rag_chatbot/indexing/__init__.py",
         "src/rag_chatbot/indexing/pipeline.py",
+        "src/rag_chatbot/llm/__init__.py",
+        "src/rag_chatbot/llm/base.py",
+        "src/rag_chatbot/llm/gemini_provider.py",
+        "src/rag_chatbot/llm/prompt_builder.py",
         "src/rag_chatbot/retrieval/formatting.py",
         "src/rag_chatbot/retrieval/retriever.py",
         "src/rag_chatbot/rag/pipeline.py",
@@ -89,6 +93,7 @@ def test_expected_project_structure_exists() -> None:
         "tests/test_api_routes.py",
         "tests/test_diagnostics.py",
         "tests/test_local_pipeline.py",
+        "tests/test_llm_prompt_builder.py",
         "tests/test_ui_api_client.py",
     ]
 

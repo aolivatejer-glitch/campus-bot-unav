@@ -209,6 +209,11 @@ class RagAnswer(BaseModel):
     has_sufficient_context: bool
     warning: str | None = None
     rejection_reason: str | None = None
+    mode: str = "extractive"
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    llm_used: bool = False
+    llm_warning: str | None = None
     domain: DomainGuardrailResult | None = None
     sources: list[RagSource]
     retrieved_chunks: list[RetrievedChunk]

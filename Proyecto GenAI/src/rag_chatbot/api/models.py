@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -56,6 +56,7 @@ class RetrieveResponse(BaseModel):
 
 class QueryRequest(BaseModel):
     question: str = Field(..., min_length=1)
+    mode: Literal["extractive", "llm"] | None = None
     top_k: int | None = Field(default=None, ge=1)
     min_score: float | None = Field(default=None, ge=0.0, le=1.0)
     show_chunks: bool = False
@@ -86,6 +87,11 @@ class QueryResponse(BaseModel):
     has_sufficient_context: bool
     warning: str | None = None
     rejection_reason: str | None = None
+    mode: str = "extractive"
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    llm_used: bool = False
+    llm_warning: str | None = None
     sources: list[QuerySourceItem]
     retrieved_chunks: list[QueryChunkItem]
 

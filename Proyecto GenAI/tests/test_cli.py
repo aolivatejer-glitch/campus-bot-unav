@@ -55,7 +55,9 @@ def _set_project_env(monkeypatch, tmp_path: Path) -> dict[str, Path]:
     return path_values
 
 
-def test_health_command_responds() -> None:
+def test_health_command_responds(monkeypatch) -> None:
+    monkeypatch.setenv("ALLOW_EXTERNAL_LLM", "false")
+    monkeypatch.setenv("LLM_PROVIDER", "none")
     get_settings.cache_clear()
 
     result = runner.invoke(app, ["health"])
@@ -323,6 +325,7 @@ class FakeCliRetriever:
         min_score=None,
         document_id=None,
         file_name=None,
+        mode=None,
     ):
         text = "Texto completo que solo debe mostrarse si se usa show-text."
         return RetrievalResponse(
@@ -405,6 +408,7 @@ class FakeCliRagPipeline:
         min_score=None,
         document_id=None,
         file_name=None,
+        mode=None,
     ):
         text = "Texto completo recuperado para la respuesta extractiva."
         return RagAnswer(

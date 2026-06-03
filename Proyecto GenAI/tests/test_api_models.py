@@ -15,6 +15,12 @@ def test_query_request_defaults() -> None:
     request = QueryRequest(question="pregunta")
 
     assert request.show_chunks is False
+    assert request.mode is None
+
+
+def test_query_request_validates_mode() -> None:
+    with pytest.raises(ValidationError):
+        QueryRequest(question="pregunta", mode="gemini")
 
 
 def test_query_response_accepts_rejection_reason() -> None:
