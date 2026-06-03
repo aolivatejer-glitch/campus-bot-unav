@@ -148,6 +148,8 @@ Variables principales:
 - `TOP_K`, `MIN_RETRIEVAL_SCORE`: parametros de recuperacion.
 - `MIN_CONTEXT_CHARS`, `MAX_CONTEXT_CHARS`, `MAX_SOURCES`: control de respuesta.
 - `API_HOST`, `API_PORT`, `API_BASE_URL`: API y UI local.
+- `API_REQUEST_TIMEOUT_SECONDS`: tiempo maximo de espera del cliente UI para
+  consultas a la API. Por defecto `120`.
 - `ALLOW_EXTERNAL_LLM=false` y `LLM_PROVIDER=none`: privacidad local-first.
 
 ## Flujo recomendado desde cero
@@ -384,6 +386,15 @@ respuesta extractiva con fuentes. Por defecto no se devuelven chunks completos.
 
 ## UI local
 
+La interfaz Streamlit esta pensada para demo academica de una consulta RAG:
+
+```text
+Pregunta -> respuesta -> fuentes -> chunks opcionales
+```
+
+No implementa memoria conversacional, login ni multiples conversaciones. Conserva
+solo la ultima consulta visible para facilitar la demostracion.
+
 Flujo recomendado:
 
 PowerShell o CMD:
@@ -404,15 +415,73 @@ Tambien puedes fijar la URL de API:
 rag-chatbot ui --api-base-url http://127.0.0.1:8000
 ```
 
-La interfaz permite escribir una pregunta, ajustar `top_k` y `min_score`,
-mostrar u ocultar fuentes y mostrar chunks recuperados solo si se solicita.
+La interfaz permite:
+
+- Escribir una pregunta principal.
+- Elegir modo `RAG extractivo local` o `RAG generativo con Gemini`.
+- Ajustar `top_k` y `min_score`.
+- Mostrar u ocultar fuentes.
+- Mostrar chunks recuperados solo si se solicita.
+- Ver estado de API, indice vectorial y modelo de embeddings.
+- Revisar advertencias de contexto insuficiente, fallback de Gemini o pregunta
+  fuera de dominio.
+
+Si las consultas generativas tardan demasiado, ajusta en `.env`:
+
+```env
+API_REQUEST_TIMEOUT_SECONDS=120
+```
+
+Puedes subirlo, por ejemplo a `180`, si Gemini tarda mas en responder durante
+una demo. La UI mostrara un mensaje amigable si se supera ese tiempo.
 
 Ejemplos de preguntas:
 
-- "Que documentos hablan sobre compliance?"
 - "Que dice el protocolo sobre acoso entre estudiantes?"
 - "Que establece la politica de IA?"
 - "Que normas regulan la convivencia en la Universidad de Navarra?"
+- "Que informacion contiene el documento sobre compliance penal?"
+- "Que dice la normativa sobre reconocimiento de creditos de grado?"
+
+Modo extractivo:
+
+```cmd
+rag-chatbot ask "Que establece la politica de IA?" --mode extractive
+```
+
+Modo Gemini:
+
+```cmd
+rag-chatbot ask "Que establece la politica de IA?" --mode llm
+```
+
+Para compartir una demo puntual con Cloudflare Tunnel, levanta primero API y UI
+en local:
+
+```cmd
+rag-chatbot serve
+```
+
+En otra terminal:
+
+```cmd
+rag-chatbot ui
+```
+
+Y en una tercera terminal, si tienes `cloudflared` instalado:
+
+```cmd
+cloudflared tunnel --url http://127.0.0.1:8501
+```
+
+Limitaciones de esta forma de compartir:
+
+- No hay autenticacion.
+- No es despliegue productivo.
+- Quien tenga el enlace puede consultar la demo mientras el tunel este activo.
+- Si seleccionas modo Gemini y esta permitido en `.env`, se enviaran pregunta y
+  fragmentos recuperados al proveedor externo.
+- No compartas el tunel con documentos sensibles sin controles adicionales.
 
 ## Evaluacion
 

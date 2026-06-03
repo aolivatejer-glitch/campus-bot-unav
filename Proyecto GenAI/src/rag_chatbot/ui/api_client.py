@@ -12,8 +12,12 @@ class ApiConnectionError(ApiClientError):
     pass
 
 
+class ApiTimeoutError(ApiClientError):
+    pass
+
+
 class RagApiClient:
-    def __init__(self, base_url: str, *, timeout: float = 20.0) -> None:
+    def __init__(self, base_url: str, *, timeout: float = 120.0) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
@@ -66,6 +70,11 @@ class RagApiClient:
                 body = response.read().decode("utf-8")
         except HTTPError as exc:
             raise ApiClientError(_read_http_error(exc)) from exc
+        except TimeoutError as exc:
+            raise ApiTimeoutError(
+                "La consulta tardó más de lo esperado. Si estás usando Gemini, "
+                "intenta nuevamente o aumenta API_REQUEST_TIMEOUT_SECONDS."
+            ) from exc
         except URLError as exc:
             raise ApiConnectionError(
                 f"No se pudo conectar con la API local en {self.base_url}: {exc.reason}"

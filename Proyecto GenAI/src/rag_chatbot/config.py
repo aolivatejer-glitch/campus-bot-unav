@@ -69,6 +69,7 @@ class AppSettings(BaseSettings):
     api_reload: bool = False
     api_include_debug_errors: bool = False
     api_base_url: str = "http://127.0.0.1:8000"
+    api_request_timeout_seconds: float = Field(default=120.0, gt=0)
 
     @field_validator(
         "documents_dir",

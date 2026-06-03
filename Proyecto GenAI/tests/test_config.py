@@ -47,6 +47,7 @@ ENV_KEYS = [
     "API_RELOAD",
     "API_INCLUDE_DEBUG_ERRORS",
     "API_BASE_URL",
+    "API_REQUEST_TIMEOUT_SECONDS",
 ]
 
 
@@ -85,6 +86,7 @@ def test_default_settings_load(monkeypatch) -> None:
     assert settings.api_reload is False
     assert settings.api_include_debug_errors is False
     assert settings.api_base_url == "http://127.0.0.1:8000"
+    assert settings.api_request_timeout_seconds == 120.0
 
 
 def test_public_dict_masks_gemini_api_key() -> None:
