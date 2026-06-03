@@ -28,6 +28,8 @@ ENV_KEYS = [
     "MIN_CONTEXT_CHARS",
     "MAX_CONTEXT_CHARS",
     "MAX_SOURCES",
+    "ENABLE_DOMAIN_GUARDRAILS",
+    "DOMAIN_NAME",
     "EVAL_DATASET_PATH",
     "EVAL_REPORTS_DIR",
     "EVAL_ANSWER_PREVIEW_CHARS",
@@ -57,12 +59,14 @@ def test_default_settings_load(monkeypatch) -> None:
     assert settings.chunk_size == 1200
     assert settings.chunk_overlap == 200
     assert settings.min_chunk_size == 200
-    assert settings.top_k == 5
-    assert settings.min_retrieval_score == 0.3
+    assert settings.top_k == 3
+    assert settings.min_retrieval_score == 0.84
     assert settings.snippet_max_chars == 400
     assert settings.min_context_chars == 500
     assert settings.max_context_chars == 6000
-    assert settings.max_sources == 5
+    assert settings.max_sources == 3
+    assert settings.enable_domain_guardrails is True
+    assert settings.domain_name == "normativas y políticas de la Universidad de Navarra"
     assert settings.eval_answer_preview_chars == 300
     assert settings.api_reload is False
     assert settings.api_include_debug_errors is False

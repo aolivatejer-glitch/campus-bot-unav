@@ -59,6 +59,8 @@ def config(settings: AppSettings = Depends(get_api_settings)) -> ConfigResponse:
         top_k=settings.top_k,
         min_retrieval_score=settings.min_retrieval_score,
         allow_external_llm=settings.allow_external_llm,
+        enable_domain_guardrails=settings.enable_domain_guardrails,
+        domain_name=settings.domain_name,
     )
 
 
@@ -131,6 +133,7 @@ def query(
         answer=response.answer,
         has_sufficient_context=response.has_sufficient_context,
         warning=response.warning,
+        rejection_reason=response.rejection_reason,
         sources=[
             QuerySourceItem(
                 file_name=source.file_name,

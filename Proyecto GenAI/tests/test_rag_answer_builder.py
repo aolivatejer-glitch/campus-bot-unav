@@ -13,6 +13,18 @@ def _context(sufficient: bool) -> ContextSufficiencyResult:
     )
 
 
+def _out_of_domain_context() -> ContextSufficiencyResult:
+    return ContextSufficiencyResult(
+        has_sufficient_context=False,
+        warning="Pregunta fuera del alcance del corpus.",
+        reason="out_of_domain",
+        rejection_reason="out_of_domain",
+        best_score=None,
+        total_context_chars=0,
+        result_count=0,
+    )
+
+
 def _result() -> RetrievalResult:
     return RetrievalResult(
         chunk_id="chunk_1",
@@ -63,3 +75,15 @@ def test_build_extractive_answer_without_context_does_not_invent() -> None:
 
     assert "No encontré información suficiente" in answer
     assert "Fragmento recuperado" not in answer
+
+
+def test_build_extractive_answer_out_of_domain_does_not_add_retrieved_fragments() -> None:
+    answer = build_extractive_answer(
+        results=[_result()],
+        sources=[],
+        context=_out_of_domain_context(),
+        max_context_chars=500,
+    )
+
+    assert answer == "Pregunta fuera del alcance del corpus."
+    assert "Se recuperaron algunos fragmentos" not in answer

@@ -135,6 +135,39 @@ class FakeRagPipeline:
         )
 
 
+class RejectedDomainRagPipeline:
+    def ask(
+        self,
+        question,
+        *,
+        top_k=None,
+        min_score=None,
+        document_id=None,
+        file_name=None,
+    ):
+        return RagAnswer(
+            question=question,
+            answer=(
+                "No puedo responder esa pregunta porque está fuera del alcance de "
+                "los documentos indexados."
+            ),
+            has_sufficient_context=False,
+            warning="Pregunta fuera del alcance del corpus.",
+            rejection_reason="out_of_domain",
+            sources=[],
+            retrieved_chunks=[],
+            context=ContextSufficiencyResult(
+                has_sufficient_context=False,
+                warning="Pregunta fuera del alcance del corpus.",
+                reason="out_of_domain",
+                rejection_reason="out_of_domain",
+                best_score=None,
+                total_context_chars=0,
+                result_count=0,
+            ),
+        )
+
+
 def test_health(client) -> None:
     response = client.get("/health")
 
@@ -193,6 +226,21 @@ def test_query_can_show_chunks(client) -> None:
 
     assert response.status_code == 200
     assert response.json()["retrieved_chunks"][0]["text"] == "Texto completo recuperado."
+
+
+def test_query_exposes_domain_rejection_reason(client) -> None:
+    app.dependency_overrides[dependencies.get_rag_pipeline] = (
+        lambda: RejectedDomainRagPipeline()
+    )
+
+    response = client.post("/query", json={"question": "¿Qué documentos mencionan al Rey?"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["has_sufficient_context"] is False
+    assert payload["rejection_reason"] == "out_of_domain"
+    assert payload["sources"] == []
+    assert payload["retrieved_chunks"] == []
 
 
 def test_empty_question_returns_400(client) -> None:

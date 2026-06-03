@@ -186,9 +186,17 @@ class ContextSufficiencyResult(BaseModel):
     has_sufficient_context: bool
     warning: str | None = None
     reason: str
+    rejection_reason: str | None = None
     best_score: float | None = None
     total_context_chars: int
     result_count: int
+
+
+class DomainGuardrailResult(BaseModel):
+    is_in_domain: bool | None
+    reason: str
+    matched_terms: list[str] = Field(default_factory=list)
+    blocked_terms: list[str] = Field(default_factory=list)
 
 
 class RagAnswer(BaseModel):
@@ -196,6 +204,8 @@ class RagAnswer(BaseModel):
     answer: str
     has_sufficient_context: bool
     warning: str | None = None
+    rejection_reason: str | None = None
+    domain: DomainGuardrailResult | None = None
     sources: list[RagSource]
     retrieved_chunks: list[RetrievedChunk]
     context: ContextSufficiencyResult

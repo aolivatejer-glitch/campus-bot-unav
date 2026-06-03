@@ -51,6 +51,7 @@ def test_expected_project_structure_exists() -> None:
         "src/rag_chatbot/rag/pipeline.py",
         "src/rag_chatbot/rag/answer_builder.py",
         "src/rag_chatbot/rag/guardrails.py",
+        "src/rag_chatbot/rag/domain_guardrails.py",
         "src/rag_chatbot/rag/citations.py",
         "src/rag_chatbot/evaluation/dataset.py",
         "src/rag_chatbot/evaluation/calibration.py",

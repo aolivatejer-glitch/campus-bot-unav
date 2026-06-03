@@ -22,7 +22,7 @@ def main() -> None:
     st.caption("Consulta local-first sobre documentos indexados. Sin LLM externo.")
 
     with st.sidebar:
-        st.header("Conexion")
+        st.header("Conexión")
         api_base_url = st.text_input("API local", value=settings.api_base_url)
         client = RagApiClient(api_base_url)
 
@@ -47,12 +47,12 @@ def main() -> None:
         st.header("Estado")
         if st.button("Verificar estado"):
             _show_health(st, client)
-        if st.button("Consultar indice"):
+        if st.button("Consultar índice"):
             _show_index_info(st, client)
 
         with st.expander("Mantenimiento"):
             st.info(
-                "Las operaciones pesadas como ingesta o reindexacion se mantienen "
+                "Las operaciones pesadas como ingesta o reindexación se mantienen "
                 "fuera de esta interfaz. Usa la CLI o la API local de forma consciente."
             )
 
@@ -61,6 +61,7 @@ def main() -> None:
         "¿Qué dice el protocolo sobre acoso entre estudiantes?",
         "¿Qué establece la política de IA?",
         "¿Qué normas regulan la convivencia en la Universidad de Navarra?",
+        "¿Qué equipo ganó la última Champions League?",
     ]
     selected_example = st.selectbox("Ejemplos", [""] + examples)
     default_question = selected_example or ""
@@ -111,19 +112,29 @@ def _show_index_info(st, client: RagApiClient) -> None:
         st.error(str(exc))
         return
 
-    st.write(f"Coleccion: `{payload.get('collection')}`")
+    st.write(f"Colección: `{payload.get('collection')}`")
     st.write(f"Vectores indexados: `{payload.get('vector_count')}`")
     st.write(f"Modelo embeddings: `{payload.get('embedding_model')}`")
     st.json(payload)
 
 
 def _render_answer(st, response: dict, *, show_sources: bool, show_chunks: bool) -> None:
-    if response.get("warning"):
+    rejection_reason = response.get("rejection_reason")
+    if rejection_reason == "out_of_domain":
+        st.warning("Pregunta fuera del alcance del corpus.")
+        st.info(
+            "Este chatbot solo responde sobre documentos normativos y políticas "
+            "de la Universidad de Navarra cargados en el sistema."
+        )
+    elif response.get("warning"):
         st.warning(response["warning"])
 
     st.subheader("Respuesta")
     st.write(response.get("answer", ""))
     st.caption(f"Contexto suficiente: {response.get('has_sufficient_context')}")
+
+    if not response.get("has_sufficient_context"):
+        return
 
     if show_sources:
         st.subheader("Fuentes")
@@ -145,7 +156,7 @@ def _render_answer(st, response: dict, *, show_sources: bool, show_chunks: bool)
             st.info("No hay chunks para mostrar.")
         for chunk in chunks:
             with st.expander(
-                f"{chunk.get('file_name')} · pagina {chunk.get('page_number')} · "
+                f"{chunk.get('file_name')} · página {chunk.get('page_number')} · "
                 f"score {chunk.get('score')}"
             ):
                 st.write(f"chunk_id: `{chunk.get('chunk_id')}`")

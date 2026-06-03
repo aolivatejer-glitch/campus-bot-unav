@@ -21,6 +21,8 @@ class ConfigResponse(BaseModel):
     top_k: int
     min_retrieval_score: float
     allow_external_llm: bool
+    enable_domain_guardrails: bool
+    domain_name: str
 
 
 class RetrieveRequest(BaseModel):
@@ -83,6 +85,7 @@ class QueryResponse(BaseModel):
     answer: str
     has_sufficient_context: bool
     warning: str | None = None
+    rejection_reason: str | None = None
     sources: list[QuerySourceItem]
     retrieved_chunks: list[QueryChunkItem]
 

@@ -42,12 +42,14 @@ class AppSettings(BaseSettings):
     chunk_size: int = Field(default=1200, gt=0)
     chunk_overlap: int = Field(default=200, ge=0)
     min_chunk_size: int = Field(default=200, gt=0)
-    top_k: int = Field(default=5, gt=0)
-    min_retrieval_score: float = Field(default=0.3, ge=0.0, le=1.0)
+    top_k: int = Field(default=3, gt=0)
+    min_retrieval_score: float = Field(default=0.84, ge=0.0, le=1.0)
     snippet_max_chars: int = Field(default=400, gt=0)
     min_context_chars: int = Field(default=500, ge=0)
     max_context_chars: int = Field(default=6000, gt=0)
-    max_sources: int = Field(default=5, gt=0)
+    max_sources: int = Field(default=3, gt=0)
+    enable_domain_guardrails: bool = True
+    domain_name: str = "normativas y políticas de la Universidad de Navarra"
     eval_dataset_path: Path = Path("data/eval/evaluation_questions.jsonl")
     eval_reports_dir: Path = Path("data/eval/reports")
     eval_answer_preview_chars: int = Field(default=300, gt=0)

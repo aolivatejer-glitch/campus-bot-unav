@@ -106,6 +106,7 @@ def test_local_rag_pipeline_rejects_without_context(tmp_path) -> None:
 
     assert answer.has_sufficient_context is False
     assert "No encontré información suficiente" in answer.answer
+    assert answer.rejection_reason == "insufficient_context"
     assert answer.sources == []
 
 
@@ -119,6 +120,7 @@ def test_local_rag_pipeline_rejects_when_top_score_is_below_threshold(tmp_path) 
 
     assert answer.has_sufficient_context is False
     assert answer.context.reason == "low_score"
+    assert answer.rejection_reason == "low_score"
     assert "Con base en los documentos recuperados" not in answer.answer
 
 
@@ -138,3 +140,32 @@ def test_local_rag_pipeline_limits_sources(tmp_path) -> None:
 
     assert len(answer.sources) == 2
     assert [source.file_name for source in answer.sources] == ["a.pdf", "b.pdf"]
+
+
+def test_local_rag_pipeline_rejects_blocked_domain_without_retrieval(tmp_path) -> None:
+    retriever = FakeRetriever([_result("chunk_1", score=0.99)])
+    pipeline = LocalRagPipeline(_settings(tmp_path), retriever=retriever)
+
+    answer = pipeline.ask("¿Qué documentos mencionan al Rey?")
+
+    assert retriever.calls == []
+    assert answer.has_sufficient_context is False
+    assert answer.context.reason == "out_of_domain"
+    assert answer.rejection_reason == "out_of_domain"
+    assert answer.domain is not None
+    assert answer.domain.blocked_terms == ["rey"]
+    assert "fuera del alcance" in answer.answer
+
+
+def test_local_rag_pipeline_allows_ambiguous_question_when_retrieval_is_strong(
+    tmp_path,
+) -> None:
+    retriever = FakeRetriever([_result("chunk_1", score=0.95)])
+    pipeline = LocalRagPipeline(_settings(tmp_path), retriever=retriever)
+
+    answer = pipeline.ask("¿Dónde aparece este criterio?", min_score=0.84)
+
+    assert retriever.calls[0]["question"] == "¿Dónde aparece este criterio?"
+    assert answer.has_sufficient_context is True
+    assert answer.domain is not None
+    assert answer.domain.is_in_domain is None

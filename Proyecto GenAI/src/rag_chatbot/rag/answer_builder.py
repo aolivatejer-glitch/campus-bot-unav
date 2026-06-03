@@ -13,15 +13,17 @@ def build_extractive_answer(
             "No encontré información suficiente en los documentos indexados para "
             "responder con seguridad a esta pregunta."
         )
+        if context.rejection_reason == "out_of_domain":
+            return answer
         if results:
             answer += (
                 "\n\nSe recuperaron algunos fragmentos, pero no superan los criterios "
-                "minimos de confianza o contexto para formular una respuesta."
+                "mínimos de confianza o contexto para formular una respuesta."
             )
         return answer
 
     lines = [
-        "Con base en los documentos recuperados, se encontro lo siguiente:",
+        "Con base en los documentos recuperados, se encontró lo siguiente:",
         "",
     ]
     used_chars = 0

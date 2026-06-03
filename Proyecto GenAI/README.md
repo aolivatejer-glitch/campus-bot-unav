@@ -395,6 +395,7 @@ TOP_K=3
 MIN_RETRIEVAL_SCORE=0.84
 MAX_SOURCES=3
 MIN_CONTEXT_CHARS=500
+ENABLE_DOMAIN_GUARDRAILS=true
 ```
 
 Esta configuracion busca reducir falsos positivos, es decir, preguntas que estan
@@ -431,6 +432,57 @@ rag-chatbot eval-run
 rag-chatbot eval-grid --top-k-values 3,5 --min-score-values 0.75,0.8,0.82,0.84,0.86
 rag-chatbot eval-summary
 ```
+
+## Restricciones de dominio
+
+La busqueda vectorial siempre devuelve los chunks mas parecidos dentro del indice,
+incluso cuando la pregunta no pertenece al corpus. Por eso el pipeline `ask`
+incluye guardrails de dominio antes de construir una respuesta extractiva.
+
+Dominio permitido:
+
+```env
+ENABLE_DOMAIN_GUARDRAILS=true
+DOMAIN_NAME=normativas y políticas de la Universidad de Navarra
+```
+
+El chatbot esta limitado a normativas y politicas de la Universidad de Navarra
+cargadas en el sistema. Usa dos señales simples:
+
+- Terminos permitidos, como `compliance`, `convivencia`, `acoso`, `politica de IA`,
+  `creditos`, `practicas academicas`, `defensoria universitaria` o `docencia`.
+- Terminos claramente fuera de alcance, como `Rey`, `23F`, `Champions League`,
+  `recetas medicas`, `prediccion meteorologica`, `restaurantes`, `hoteles` o
+  `turismo`.
+
+Si una pregunta contiene un termino bloqueado claro, se rechaza sin consultar el
+indice. Si es ambigua, no se rechaza automaticamente: el sistema deja que retrieval,
+`MIN_RETRIEVAL_SCORE` y `MIN_CONTEXT_CHARS` decidan si hay evidencia suficiente.
+
+Ejemplos aceptados:
+
+```powershell
+rag-chatbot ask "Que documentos hablan sobre compliance?"
+rag-chatbot ask "Que dice el protocolo sobre acoso entre estudiantes?"
+rag-chatbot ask "Que establece la politica de IA?"
+```
+
+Ejemplos rechazados:
+
+```powershell
+rag-chatbot ask "Que documentos mencionan al Rey?"
+rag-chatbot ask "Que equipo gano la ultima Champions League?"
+rag-chatbot ask "Que dice el documento sobre recetas medicas?"
+```
+
+Cuando el rechazo es por dominio, la API `/query` devuelve
+`rejection_reason=out_of_domain`. La UI muestra una advertencia amigable y no
+presenta fuentes ni chunks como si fueran evidencia suficiente.
+
+Limitaciones: esta estrategia no es un clasificador perfecto. Las listas de
+terminos son una ayuda, no la unica regla. Si aparecen falsos positivos que no
+se corrigen con umbral y guardrails, el siguiente paso razonable seria evaluar
+reranking local.
 
 ## Errores frecuentes
 

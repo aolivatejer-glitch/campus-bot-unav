@@ -604,9 +604,11 @@ def ask(
     typer.echo("")
     typer.echo(f"Context sufficient: {response.has_sufficient_context}")
     typer.echo(f"Context reason: {response.context.reason}")
+    if response.rejection_reason:
+        typer.echo(f"Rejection reason: {response.rejection_reason}")
     typer.echo(f"Retrieved chunk count: {len(response.retrieved_chunks)}")
 
-    if show_sources:
+    if show_sources and response.has_sufficient_context:
         typer.echo("")
         typer.echo("Sources:")
         if not response.sources:

@@ -80,6 +80,7 @@ def test_api_client_handles_insufficient_context_response(monkeypatch) -> None:
                 "answer": "No encontre informacion suficiente.",
                 "has_sufficient_context": False,
                 "warning": "No encontre informacion suficiente.",
+                "rejection_reason": "out_of_domain",
                 "sources": [],
                 "retrieved_chunks": [],
             }
@@ -97,3 +98,4 @@ def test_api_client_handles_insufficient_context_response(monkeypatch) -> None:
 
     assert response["has_sufficient_context"] is False
     assert response["warning"] == "No encontre informacion suficiente."
+    assert response["rejection_reason"] == "out_of_domain"
