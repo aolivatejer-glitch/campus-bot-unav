@@ -426,6 +426,17 @@ La interfaz permite:
 - Revisar advertencias de contexto insuficiente, fallback de Gemini o pregunta
   fuera de dominio.
 
+El logo de la Universidad de Navarra, si se quiere mostrar en la cabecera, debe
+estar en:
+
+```text
+src/rag_chatbot/ui/assets/unav_logo.png
+```
+
+La UI lo carga con una ruta relativa basada en `pathlib`, por lo que funciona
+tanto con `python -m rag_chatbot.cli ui` como con
+`streamlit run src/rag_chatbot/ui/streamlit_app.py`.
+
 Si las consultas generativas tardan demasiado, ajusta en `.env`:
 
 ```env

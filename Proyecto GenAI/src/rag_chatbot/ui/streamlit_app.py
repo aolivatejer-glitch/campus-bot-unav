@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from rag_chatbot.config import get_settings
 from rag_chatbot.ui.api_client import (
     ApiClientError,
@@ -6,6 +8,9 @@ from rag_chatbot.ui.api_client import (
     RagApiClient,
 )
 
+
+ASSETS_DIR = Path(__file__).parent / "assets"
+LOGO_PATH = ASSETS_DIR / "unav_logo.png"
 
 ACCENT_RED = "#b00020"
 TEXT_DARK = "#1f1f1f"
@@ -36,11 +41,12 @@ def main() -> None:
         page_title="Campus Bot UNAV",
         page_icon="",
         layout="wide",
+        initial_sidebar_state="expanded",
     )
     _inject_styles(st)
     _init_state(st)
 
-    with st.sidebar:
+    if False:
         st.markdown('<div class="sidebar-brand">Universidad de Navarra</div>', unsafe_allow_html=True)
         st.caption("Proyecto GenAI")
 
@@ -94,6 +100,7 @@ def main() -> None:
 
     _render_header(st)
     _render_suggestions(st)
+    client, mode, top_k, min_score, show_sources, show_chunks = _render_controls(st, settings)
 
     question = st.text_area(
         "Pregunta",
@@ -133,9 +140,25 @@ def _inject_styles(st) -> None:
     st.markdown(
         f"""
         <style>
+        div[data-testid="stDecoration"],
+        #MainMenu,
+        footer {{
+            display: none;
+            visibility: hidden;
+            height: 0;
+        }}
+        header[data-testid="stHeader"] {{
+            background: transparent;
+        }}
+        [data-testid="stAppViewContainer"] .main .block-container,
+        section.main > div.block-container,
         .main .block-container {{
             max-width: 1080px;
-            padding-top: 2rem;
+            padding-top: 0.5rem !important;
+            margin-top: 0 !important;
+        }}
+        [data-testid="stVerticalBlock"] {{
+            gap: 0.5rem;
         }}
         h1, h2, h3, p, label, span {{
             color: {TEXT_DARK};
@@ -158,7 +181,12 @@ def _inject_styles(st) -> None:
             color: {TEXT_MUTED};
             font-size: 1rem;
             max-width: 760px;
-            margin-bottom: 1.5rem;
+            margin-bottom: 0.75rem;
+        }}
+        .header-rule {{
+            border-bottom: 1px solid {BORDER};
+            margin-top: 0.35rem;
+            margin-bottom: 0.85rem;
         }}
         .answer-card, .source-card, .status-card {{
             border: 1px solid {BORDER};
@@ -188,6 +216,7 @@ def _inject_styles(st) -> None:
             border-radius: 8px;
             background: {SURFACE};
             padding: 0.85rem;
+            margin-bottom: 1rem;
             font-size: 0.86rem;
             color: {TEXT_MUTED};
         }}
@@ -221,6 +250,9 @@ def _init_state(st) -> None:
 
 
 def _render_header(st) -> None:
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), width=150)
+
     st.markdown(
         """
         <div class="rag-eyebrow">Universidad de Navarra · Proyecto GenAI</div>
@@ -232,6 +264,7 @@ def _render_header(st) -> None:
         """,
         unsafe_allow_html=True,
     )
+    st.markdown('<div class="header-rule"></div>', unsafe_allow_html=True)
 
 
 def _render_suggestions(st) -> None:
@@ -241,6 +274,81 @@ def _render_suggestions(st) -> None:
         with columns[index % 2]:
             if st.button(question, key=f"suggestion_{index}", use_container_width=True):
                 st.session_state.question = question
+
+
+def _render_controls(st, settings):
+    with st.expander("Configuración de consulta", expanded=True):
+        status_col, index_col, api_col = st.columns([1, 1, 3])
+        api_base_url = api_col.text_input(
+            "API local",
+            value=settings.api_base_url,
+            key="main_api_base_url",
+        )
+        client = RagApiClient(
+            api_base_url,
+            timeout=float(settings.api_request_timeout_seconds),
+        )
+
+        with status_col:
+            st.caption("Estado de API")
+            if st.button("Verificar API", key="main_health", use_container_width=True):
+                _show_health(st, client)
+        with index_col:
+            st.caption("Índice vectorial")
+            if st.button("Verificar índice", key="main_index", use_container_width=True):
+                _show_index_info(st, client)
+
+        mode_col, topk_col, score_col = st.columns([2, 1, 1])
+        with mode_col:
+            mode_label = st.radio(
+                "Modo de respuesta",
+                ["RAG extractivo local", "RAG generativo con Gemini"],
+                index=0 if settings.llm_mode_default != "llm" else 1,
+                help="Gemini solo se usa si está permitido en .env y hay contexto suficiente.",
+                horizontal=True,
+                key="main_response_mode",
+            )
+        with topk_col:
+            top_k = st.slider(
+                "top_k",
+                min_value=1,
+                max_value=10,
+                value=settings.top_k,
+                key="main_top_k",
+            )
+        with score_col:
+            min_score = st.slider(
+                "min_score",
+                min_value=0.0,
+                max_value=1.0,
+                value=float(settings.min_retrieval_score),
+                step=0.01,
+                key="main_min_score",
+            )
+
+        source_col, chunk_col = st.columns(2)
+        with source_col:
+            show_sources = st.toggle("Mostrar fuentes", value=True, key="main_show_sources")
+        with chunk_col:
+            show_chunks = st.toggle(
+                "Mostrar chunks recuperados",
+                value=False,
+                key="main_show_chunks",
+            )
+
+        st.markdown(
+            """
+            <div class="privacy-note">
+              <strong>Privacidad</strong><br>
+              Modo local: los documentos no salen del equipo.<br>
+              Modo Gemini: solo se envían la pregunta y los fragmentos recuperados.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    mode = "llm" if mode_label == "RAG generativo con Gemini" else "extractive"
+    return client, mode, int(top_k), float(min_score), show_sources, show_chunks
 
 
 def _run_query(
@@ -257,7 +365,7 @@ def _run_query(
         st.warning("Escribe una pregunta antes de consultar.")
         return
 
-    with st.spinner("Procesando consulta..."):
+    with st.spinner(_spinner_message(mode)):
         try:
             st.session_state.last_response = client.query(
                 question=question.strip(),
@@ -277,6 +385,12 @@ def _run_query(
         except ApiClientError as exc:
             st.session_state.last_response = None
             _render_api_error(st, str(exc))
+
+
+def _spinner_message(mode: str) -> str:
+    if mode == "llm":
+        return "Consultando documentos y generando respuesta con Gemini..."
+    return "Buscando en los documentos indexados..."
 
 
 def _show_health(st, client: RagApiClient) -> None:

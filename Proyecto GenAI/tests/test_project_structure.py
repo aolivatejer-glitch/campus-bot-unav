@@ -94,6 +94,7 @@ def test_expected_project_structure_exists() -> None:
         "tests/test_diagnostics.py",
         "tests/test_local_pipeline.py",
         "tests/test_llm_prompt_builder.py",
+        "tests/test_streamlit_app.py",
         "tests/test_ui_api_client.py",
     ]
 
